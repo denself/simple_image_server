@@ -23,6 +23,7 @@ settings.configure(
 
 from django import forms
 from django.conf.urls import url
+from django.core.cache import cache
 from django.core.wsgi import get_wsgi_application
 from django.http import HttpResponse, HttpResponseBadRequest
 
@@ -37,17 +38,21 @@ class ImageForm(forms.Form):
         """Generate an image of requested type and return as raw bytes"""
         height = self.cleaned_data['height']
         width = self.cleaned_data['width']
-        image = Image.new('RGB', (width, height))
-        draw = ImageDraw.Draw(image)
-        text = '{} x {}'.format(width, height)
-        text_width, text_height = draw.textsize(text)
-        if text_width <= width and text_height <= height:
-            text_top = (height - text_height) // 2
-            text_left = (width - text_width) // 2
-            draw.text((text_left, text_top), text, fill=(255, 255, 255))
-        content = BytesIO()
-        image.save(content, image_format)
-        content.seek(0)
+        key = '{}.{}.{}'.format(width, height, image_format)
+        content = cache.get(key)
+        if content is None:
+            image = Image.new('RGB', (width, height))
+            draw = ImageDraw.Draw(image)
+            text = '{} x {}'.format(width, height)
+            text_width, text_height = draw.textsize(text)
+            if text_width <= width and text_height <= height:
+                text_top = (height - text_height) // 2
+                text_left = (width - text_width) // 2
+                draw.text((text_left, text_top), text, fill=(255, 255, 255))
+            content = BytesIO()
+            image.save(content, image_format)
+            content.seek(0)
+            cache.set(key, content, 60*60)
         return content
 
 
