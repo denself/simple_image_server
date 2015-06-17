@@ -2,7 +2,7 @@
 import os
 import sys
 from io import BytesIO
-from PIL import Image
+from PIL import Image, ImageDraw
 from django.conf import settings
 
 __author__ = 'Denis Ivanets (denself@gmail.com)'
@@ -38,6 +38,13 @@ class ImageForm(forms.Form):
         height = self.cleaned_data['height']
         width = self.cleaned_data['width']
         image = Image.new('RGB', (width, height))
+        draw = ImageDraw.Draw(image)
+        text = '{} x {}'.format(width, height)
+        text_width, text_height = draw.textsize(text)
+        if text_width <= width and text_height <= height:
+            text_top = (height - text_height) // 2
+            text_left = (width - text_width) // 2
+            draw.text((text_left, text_top), text, fill=(255, 255, 255))
         content = BytesIO()
         image.save(content, image_format)
         content.seek(0)
